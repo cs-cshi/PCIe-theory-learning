@@ -170,7 +170,7 @@ Mux 对上层来的 TLP、DLLP 加入相应 Tokens 构建完整的 TLP、DLLP �
 ### Byte Striping x8 Example
 <center>Figure 12-12: Gen x3 Example: TLP Straddles Block Boundary</center>
 ![](./images/12-12.png)
-图 12-12 展示了 8x 链路的数据传输示例。此图与 12-11 不同，本图中比特流垂直绘制，以小端绘制。Sync Header 出现在以 128b 为块的块头，并同时出现在所有 lane 上，标识数据块传输的开始。此图中首先发送 TLP token，其中 Length 字段表明 TLP 整个长度为 7DW。接收端通过 Length 字段计数得到这个 TLP 的结束位置，而不需要再使用 END 控制字符（Gen1、Gen2）作为结束边界。如果没有收到 EDB Token 表明当前 TLP 正常，在 lane3 结束。
+图 12-12 展示了 x8 链路的数据传输示例。此图与 12-11 不同，本图中比特流垂直绘制，以小端绘制。Sync Header 出现在以 128b 为块的块头，并同时出现在所有 lane 上，标识数据块传输的开始。此图中首先发送 TLP token，其中 Length 字段表明 TLP 整个长度为 7DW。接收端通过 Length 字段计数得到这个 TLP 的结束位置，而不需要再使用 END 控制字符（Gen1、Gen2）作为结束边界。如果没有收到 EDB Token 表明当前 TLP 正常，在 lane3 结束。
 
 接着发送 DLLP 报文。lane4、lane5 中 SDP Token 作为 DLLP 的开始边界，后接 6 Symbol（Byte）信息，注意 DLLP 长度总为 8B。DLLP 之后没有数据发送，因此填充 IDL。在 DLP 之后，再发送 TLP 时只能从 lane 0 开始。
 
@@ -187,7 +187,7 @@ Mux 对上层来的 TLP、DLLP 加入相应 Tokens 构建完整的 TLP、DLLP �
 ![](./images/12-14.png)
 图 12-14 展示传输一个有序集的基本组成。有序集 Sync Header 为 01b，其后是一个长度为 16B (128b) 的有序集，SOS 例外，因为 SOS 可以由中间接收器一次以 4 个字节为增量进行更改，以进行时钟补偿，其长度可以为 8、12、16B...。在不添加 SKP 的链路中 SOS 也由 16B 组成。
 
-图 12-5 展示了一个 x8 的链路中数据传输示例。成帧规则规定，当 Ordered Set 即将传输时，当前数据流的数据块最后必须以一个双字的 EDS Token 结束。当当前数据流不结束时，当前截断数据流后的 Ordered Sets 只能是 SOS，并且 SOS 后紧跟数据块。
+图 12-15 展示了一个 x8 的链路中数据传输示例。成帧规则规定，当 Ordered Set 即将传输时，当前数据流的数据块最后必须以一个双字的 EDS Token 结束。当当前数据流不结束时，当前截断数据流后的 Ordered Sets 只能是 SOS，并且 SOS 后紧跟数据块。
 <center>Figure 12-15: Gen3 x8 Skip Ordered Set (SOS) Example</center>
 ![](./images/12-15.png)
 
@@ -212,7 +212,7 @@ Mux 对上层来的 TLP、DLLP 加入相应 Tokens 构建完整的 TLP、DLLP �
 - SOS 发生在 370~375 blocks 之间，Loopback 需在此期间调度两个 SOS，彼此间隔不超过 2 blocks。
 - SOS 只能在数据包边界发送，可能会累积，但不允许连续发送 SOS，必须使用 Data Block 隔开。
 - 发送端处于电气空闲状态时重置 SOS 定时器和计数器。
-- 128b/130b 中 Compliance SOS bit（合规性 SOS 位）不起作用，该为用于 8b/10b Compliance test 期间禁用 SOS。
+- 128b/130b 中 Compliance SOS bit（合规性 SOS 位）不起作用，该位用于 8b/10b Compliance test 期间禁用 SOS。
 ### Receiver SOS Rules
 接收端 SOS 规则：
 - 需能在 370~375 blocks 平均间隔间接收 SOS。电气空闲后第一个 SOS 会提前发送。
@@ -253,6 +253,7 @@ Gen1、Gen2 中各 lane 可以用相同的方式加扰，即单个 LFSR 为所�
 - 单个 LFSR 能使用更少的 gates，但 XOR 过程会产生额外延迟。
 <center> Table 12-4: Gen3 Tap Equations for Single-LFSR Scrambler</center>
 ![Table 12-4: Gen3 Tap Equations for SingleȬLFSR Scrambler](./images/12-4table.png)
+
 ### 3.3.2 Scrambling Rules
 Gen3 加扰器的 LFSRs 不会不断移位移位寄存器（advance），而是根据正在发送的内容移位。加扰器会定期重置。当检测到 EIEOS 或 FTSOS 时，加扰器会初始化。以下给出几种加扰规则：
 - Sync Header 不会加扰，也不会使用 LSFR 移位
@@ -285,7 +286,7 @@ Gen3 接收逻辑与 Gen1/Gen2 一样，首先从 CDR (Clock and Data Recovery) 
 本文接下来重点论述 Gen3 改变的部分，对于与 Gen1/Gen2 没有改变的部分不再论述。
 
 ## 4.1 Differential Receiver
-差分接收器逻辑与 Gen1/Gen2 一样，但进行了电气修改以提高信号完整性（P.468 Signal  Compensation），以及建立信号均衡的训练修改（P.577 Link Eqalization Overview）。#TODO
+差分接收器逻辑与 Gen1/Gen2 一样，但进行了电气修改以提高信号完整性（P.468 Signal  Compensation），以及建立信号均衡的训练修改（P.577 Link Eqalization Overview）。
 
 ## 4.2 CDR (Clock and Data Recovery) Logic
 ### 4.2.1 Rx Clock Recovery

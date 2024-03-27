@@ -3,33 +3,33 @@ Chapter 12 描述了 Gen3 逻辑物理层特性。相比 Gen2，Gen3 在频率�
 
 # 1. Backward Compatibitity
 Spec 规定物理层电气部分需要向下兼容，即更高的速率需要兼容低速率。基本要求：
-- 所有设备初始训练以 2.5 GT/s Gen1 速度完成
+- 所有设备初始训练以 2.5 GT/s Gen1 速率完成
 - 更改速率需要链路双方协商，以确定双方共同支持的最高速率。
-- 支持高速率 Root ports 需要同时支持低速率 Gen1、Gen2
+- 支持高速率 Root ports 需要同时支持低速率的 Gen1/2
 	- Root ports：PCIe 总线起始点，链接 CPU/北桥
-- 下游设备必须支持 Gen1 速率，中间速率可选。即下游 Gen3 设备需支持 Gen1、Gen3 速率，Gen2 速率可不支持。
+- 下游设备必须支持 Gen1 速率，中间速率可选。即下游 Gen3 设备需支持 Gen1/3 速率，Gen2 速率可不支持。
 > 无论速率如何，可选的参考时钟（Refclk）都保持不变，并且不需要改动抖动特性（jitter characteristics）来支持更高的速率。
 
-Gen3 提升至 8.0GT/s 做的一些变化：
-- ESD standards（静电放电）：Gen3 与 Gen1/Gen2 版本一样，要求所有信号和电源引脚能承受一定水平的静电放电（Electro-Static Discharge, ESD）。但 Gen3 需要满足更多的 JEDEC 标准，并且 SPEC 指出该标准适用于设备，无论它们支持哪种速率。
+提升至 Gen3 8.0GT/s 做的一些变化：
+- ESD standards（静电放电）：Gen3 与 Gen1/2 版本一样，要求所有信号和电源引脚能承受一定水平的静电放电（Electro-Static Discharge, ESD）。但 Gen3 需要满足更多的 JEDEC 标准，并且 SPEC 指出该标准适用于设备，无论它们支持哪种速率。
 - Rx powered-off Resistance（断点电阻）：Gen3 指定了新的阻抗值（ $Z_{RX-HIGH-IMP-DC-POS}$  和 $Z_{RX-HIGH-IMP-DC-NEG}$ ），该阻抗值同时也应用于 Gen1、Gen2。
-- Tx Equalization Tolerance（均衡容差）：将 Tx 去加重值的先前规格容差从 +/-0.5dB 放宽至 +/-1.0dB，使得 -3.5、-6.0dB 去加重容差在 Gen1/2/3 上保持一致。
+- Tx Equalization Tolerance（均衡容差）：将 Tx 去加重（de-emphasis）值的先前规格容差从 +/-0.5dB 放宽至 +/-1.0dB，使得 -3.5、-6.0dB 去加重容差在 Gen1/2/3 上保持一致。
 - Tx Equalization during Tx Margining：在早期规范中，这种情况去加重容差已放宽至 +/-1.0dB。Gen3 的精度由发送端的 Tx 系数粒度（Tx coefficient granularity）和 TxEQ 容差决定。
 - $V_{TX-ACCM}$ 和 $V_{RX-ACCM}$ ：对于 Gen1、Gen2，发送端放宽至 150 mVPP，接收端放宽至 300 mVPP。
 > ACCM：AC Common-Mode Voltage，用于数据传输的交流信号的共模电压。
 > mVPP：Voltage Pead-Peak，指信号波形中正峰值和负峰值之间的差异。150mVPP 表示信号在正负方向上的振幅差异为 150 毫伏（mV）。
 
 # 2. Component Interfaces
-来自不同供应商的组件必须可靠地协同工作，因此借口必须满足一些规定。Gen1 的接口是隐式规定的，Gen2 接口显示规定了需要满足的参数。其他接口可能在连接器或其他位置指定，它们没有包含在基本规范中，而是会在其他规格中描述，如 PCI Express Card Electrimechanical Spec。
+来自不同供应商的组件必须可靠地协同工作，因此接口必须满足一些规定。Gen1 的接口是隐式规定的，Gen2 接口显示规定了需要满足的参数。其他接口可能在连接器或其他位置指定，它们没有包含在基本规范中，而是会在其他规格中描述，如 PCI Express Card Electrimechanical Spec。
 
 # 3. Physical Layer Electrical Overview
 <center>Figure 13-1: Electrical Sub-Block of the Physical Layer</center>
 ![](images/13-1.png)
-每个 lane 的电气子模块提供了链路的物理接口，其包含差分发送器和接收器。发送器通过将比特流转换为两个具有相反极性的单端电信号来在每个 lane 上传送 Symbols。接收端比较两个信号，当差异足够正或负时，生成一个 1 或 0，以将预期发送的串行比特流重新发送到物理层其他部分。
+每个 lane 的电气子模块提供了链路的物理接口，其包含差分发送器和接收器。发送器将比特流转换为两个具有相反极性的单端电信号来在每个 lane 上传送数据。接收端比较两个信号，当差异足够正或负时，生成一个 1 或 0，恢复出比特流数据后再发送到物理层其他部分。
 
-当链路处于 L0 full-on 状态时，驱动器会施加与逻辑 1 和逻辑 0 相关的差分电压，同时保持正确的直流共模电压（DC common mode voltage）。接收端将此电压视为输入流，如果它降到阈值以下时，则可以理解为表示电气空闲链路状态。链路禁用、ASPM 逻辑将链路置于低功耗状态（L0s、L1）时，就会进入到链路空闲状态。
+当链路处于 L0 full-on 状态时，驱动器会施加与逻辑 1 和逻辑 0 相关的差分电压，同时保持正确的直流共模电压（DC common mode voltage）。接收端将此电压视为输入流，如果它低于某个阈值时，则可以理解为处于电气空闲链路状态。链路禁用、ASPM 逻辑将链路置于低功耗状态（L0s、L1）时，就会进入到链路空闲状态。
 
-设备必须支持所支持速率所需的发送端均衡方法（Transmitter equalization），实现足够的信号完整性。Gen1、Gen2 采用去加重，Gen3 采用更复杂的均衡策略。后续会有讲到。（#TODO）
+设备必须支持自身所支持速率的 Tx 均衡方法（Transmitter equalization），实现足够的信号完整性。Gen1/2 采用去加重（de-emphasis），Gen3 采用更复杂的均衡策略（Preset）。后续会有讲到。（#TODO）
 
 驱动器和接收端具有短路容错能力，使 PCIe add-in Cards 适用于热插拔连接两个组件的链路通过在线路中添加电容器（通常靠近链路发送端侧，$C_{TX}$）进行交流耦合（AC-coupled），以将链路组件之间的直流信号部分去耦，意味着它们不必像通过电缆连接的设备那样共用一个电源或接地。
 > $C_{TX}$：用于将交流信号传至另一电路或电子元件，同时阻隔直流信号，有助于隔离不同电路部分，确保不会相互干扰。
@@ -50,7 +50,7 @@ PCIe Gen3 信号传输架构特点如图 13-2 所示。这种低压差分信号�
 
 # 5. Clock Requrements
 ## 5.1 General
-对于所有数据速率，发送端和接收端时钟都必须精确到中心频率的 +/-300（百万分之一）以内。在最坏情况下，发送端和接收端可能相差 600ppm，意味着每 1666 （1 million/600）个时钟将多/少 1 个时钟，接收端时钟补偿逻辑需要考虑这种差异。
+对于所有数据速率，发送端和接收端时钟都必须精确到中心频率的 +/-300 ppm（百万分之一）以内。在最坏情况下，发送端和接收端可能相差 600ppm，意味着每 1666 （1 million/600）个时钟将多/少 1 个时钟，接收端时钟补偿逻辑需要考虑这种差异。
 
 设备可以从外部获得时钟，并且在 3.0 SPEC 中仍然可以使用 100 MHz Refclk 来实现此目的。即使在应用扩频（Spread Spectrum Clocking）时，使用 Refclk 也能让链路双方保持 600ppm 的精度。
 
@@ -116,17 +116,20 @@ Gen3 下SPEC 中同样讲述了与 Gen2 相同的时钟框架。不同之处在�
 
 当频率较低时，lumped-element（集总元件）描述足够，但当频率足够高，波长接近电路尺寸时，需要分布式模型，使用 S-parameters 来表示。
 当信号未被驱动时（如低功耗链路状态），发送端可能会进入高阻抗状态以减少功耗。对于这种情况，只需要满足 $I_{TX-SHORT}$ 值，并且未定义差分阻抗。
+
 ## 6.3 ESD and Short Circuit Requirements
 所有信号和电源必须能够承受使用人体模型的 2000V ESD（静电放电）和使用充电设备模型的 500V 的电压。更多详细描述需参阅 JEDEC JESE22-A114-A spec。 ESD 要求不仅可以防静电，还能助于支持意外的热插拔。该目标要求发送端和接收端能够承受 $I_{TX-SHORT}$ 的持续短路电流，后续会介绍。（#TODO）
+
 ## 6.4 Receiver Detection
 <center>Figure 13-11: Receiver Detection Mechanism</center>
 ![](./images/13-11.png)
 上图所示的发送端中检测模块用于检查复位后链路的另一端是否存在接收端。这一步骤在串行传输中很少使用，因为链路双方可以通过发送数据包是否相应来测试对方是否存在。在 PCIe 中采用这种方式是为了在测试环境中提供自动硬件辅助。如果监测到适当的负载，但对方拒绝发送 TS1 参与链路训练，组件会认为其处于测试环境中，开始发送“合规模式”促进测试。由于链路复位/上电后始终以 2.5GT/s 速率开始运行，因此接收端单端直流阻抗指定用于 Gen1 速率（$Z_{RX-DC}$=40~60）。无论什么速率，都必须包含该检测逻辑。
+
 通过将发送端的直流共模电压设置为一个值，然后将其更改为另一个值来完成检测。该逻辑系统通常知道接收端存在时预期充电时间，并将测量到的时间与预期时间相比较。如果接收端存在，由于接收端终止，充电时间（RC time constant）相对较长，否则会短很多。
 
 检测接收端存在：
 - 复位或开机后，发送端在 D+ 和 D- 上驱动一个稳定的电压
-- 然后，发送端将共模电压向正方向改变，改变幅度不超过 Gen1/Gen2/Gen3 定义的 $V_{TX-RCV-DETECT}$ 值 600 mV。
+- 然后，发送端将共模电压向正方向改变，改变幅度不超过 Gen1/2/3 定义的 $V_{TX-RCV-DETECT}$ 值 600 mV。
 - 检测逻辑测量充电时间：
 	- 充电时间短，接收端不存在
 	- 接收时间长，接收端存在（由串联电容器和接收端终端控制）
@@ -146,6 +149,7 @@ SPEC 中提到一个可能出现的问题：适当的负载可能会出现在一
 <center>Figure 13-12: Differential Signaling</center>
 ![](./images/13-12.png)
 发送端驱动的差分峰值电压 $V_{TX-DIFFp-p}$ 介于 800mV 和 1200 mV （Gen3 1300mV）之间。在电气空闲期间，发送端保持差分峰值电压 $V_{TX-IDLE-DIFFp}$ 接近于 0（0-20mV），此时发送端可能处于低阻抗或高阻抗状态。
+
 接收端通过链路上的电压来感测逻辑 1 或 0，以及电气空闲。此外在高频时还要能够预期的信号损失。
 
 ### 6.5.3 Differential Notation
@@ -158,7 +162,7 @@ SPEC 中提到一个可能出现的问题：适当的负载可能会出现在一
 假设 $V_{CM} = 0$ V，如果 D+ 为 300 mV，D- 为 -300mV，则对于逻辑 1， $V_{DIFFp} = 600 mV$ ，逻辑 0 $V_{DIFFp} = -600 mV$ ，因此 $V_{DIFFp-p} = 1200mV$，Gen1/2 允许 $V_{DIFFp-p}$ 范围是 800-1200mV，对于 Gen3，在均衡（equalization）之前 是 800-1300mV。
 
 ### 6.5.4 Reduced-Swing Differential Voltage
-对于长链路或有损链路，需要使用全摆幅电压（full-swing voltage），并需要发送端提供支撑。对于 Gen1/Gen2 短链路，SPEC 为其定义了功率敏感系统，使用降低的摆幅电压，其只有全摆幅电压的一半左右。该实现可选。
+对于长链路或有损链路，需要使用全摆幅电压（full-swing voltage），并需要发送端提供支撑。对于 Gen1/2 短链路，SPEC 为其定义了功率敏感系统，使用降低的摆幅电压，其只有全摆幅电压的一半左右。该实现可选。
 
 对于 Gen3，只需要设置 Tx 系数（Tx coeffifient value）可实现减少摆幅，该功能实现可选。需要注意的是，接收端电压与发送端无关：接收端信号时钟满足正常需求，发送端和 lane 的设计需要保证这一点。
 
@@ -183,7 +187,7 @@ Tx 裕度调整期间，Gen1/Gen2 的均衡容差（equalization tolerance）从
 ![](./images/13-15.png)
 对于所有速率，接收端直流（DC）共模电压指定为 0V，图 13-15 中用接地信号$V_{RX-CM}$表示。$C_{TX}$ 串联电容器允许发送端处电压有所不同，范围为 0~3.6V。当发射端和接收端位于同一“外壳”并具有相同电源时，$C_{TX}$ 不是很重要，但如果是通过电缆连接不同设备时，这将十分重要。因为在这种信号电压很低的情况下，需要仔细考虑这种参考电压差异。
 
-当使用某种 connector 时，$C_{TX}$ 必须靠近发送端引脚，如果没有 connector，可以放置传输线上任意位置。通过 $C_{TX}$ 不会集成，因为太大。
+当使用某种 connector 时，$C_{TX}$ 必须靠近发送端引脚，如果没有 connector，可以放置传输线上任意位置。通常 $C_{TX}$ 不会集成，因为太大。
 
 图 13-15 中 No Spec 中展示了一组可选电阻，SPEC 中没有对它进行定义。实际上接收端设计人员不喜欢使用零共模电压，因为这需要实现两个参考电压，一个高于 0，一个低于0。一种优化实现是将信号完全偏移到 0 以上或以下，这样只需要一个参考电压。图中虚线通过添加一个小值在线电容器实现，以将线路上信号的直流 DC 分量去耦。
 
@@ -240,15 +244,15 @@ Gen1 de-emphasis 值是 3.5dB，即相同极性第一位之后所有位降低 3.
 ### 8.2.1 Three-Tap Tx Equalizer Required
 <center> Figure 13-21: 3-Tap Tx Equalizer </center>
 ![](./images/13-21.png)
-为了在发送端上实现更好的 wave shaping，SPEC 要求使用 3-tap FIR（Finite Impulse Response，有限脉冲响应），即具有 3 bit-time-spaced 输入的滤波器，其概要图如图 13-21 所示。从中可以看出输出电压是 3 种输入的总和：原始输入、延迟一个 bit time，延迟另一个 bit 时间。这种类型的 FIR 滤波器通常用于 6.0 Gb/s 以上的 SERDES 中，并且对 PCIe 很有帮助，因为它的补偿基于通道在更长时间内传播信号。另一种实现方式是，在给定的位同时，受其之前一位和之后一位的值影响。
+为了在发送端上实现更好的 wave shaping，SPEC 要求使用 3-tap FIR（Finite Impulse Response，有限脉冲响应）滤波器，即具有 3 bit-time-spaced 输入的滤波器，其概要图如图 13-21 所示。从中可以看出输出电压是 3 种输入的总和：原始输入、延迟一个 bit time，延迟另一个 bit 时间。这种类型的 FIR 滤波器通常用于 6.0 Gb/s 以上的 SERDES 中，并且对 PCIe 很有帮助，因为它的补偿基于通道在更长时间内传播信号。另一种实现方式是，在给定的位同时，受其之前一位和之后一位的值影响。
 <center>Figure 13-22: Tx 3-Tap Equalizer Shaping of an Output Pulse</center>
 ![](./images/13-22.png)
 如图 13-22 所示，可以将三种输入基于时序位置描述为 "pre-cursor" $C_{-1}$ 、"cursor" $C_{0}$ 、"post-cursor" $C_{+1}$ ，它们组合起来根据即将到来的输入创建一个输出，即当前值和前一个值。调整 taps 系数可以优化输出的波形。通过查看单个脉冲可以很轻松的看出对信号的调整。
 
-滤波器根据分配给每个 tap 系数值（权重）对输出进行调整。三个系数绝对值之和为 1，SPEC 中仅给出 $C_{-1}$ 和 $C_{+1}$ ，$C_{0}$ 始终为正值。
+滤波器根据分配给每个 tap 系数值（权重）对输出进行调整。三个系数绝对值之和为 1，SPEC 中仅给出 $C_{0}$  始终为正值。
 
 ### 8.2.2 Pre-shoot, De-emphasis, and Boost
-系数值的作用是调整输出电压，以创建 4 种不同的电压电平，适应不同的信号环境，如图 13-23 所示。波形显示了要传输的 4 种通用电压：maximum-height(Vd)、normal(Va)、de-emphasized(Vb) 和 pre-shoot(Vc)。
+系数值的作用是调整输出电压，以创建 4 种不同的电压，适应不同的信号环境，如图 13-23 所示。波形显示了要传输的 4 种通用电压：maximum-height(Vd)、normal(Va)、de-emphasized(Vb) 和 pre-shoot(Vc)。
 <center>Figure 13-23: 8.0 GT/s Tx Voltage Level</center>
 ![](./images/13-23.png)
 该方案向后兼容仅使用 de-emphasis 的 Gen1、Gen2，因为 pre-shoot 和 de-emphasis 可以独立定义。de-emphasis 机制与 Gen1/Gen2 一致，只是范围更大（0~-6dB）。Pre-shoot 是新功能，旨在通过提升当前位时间内（UI）的电压来改善后续位时间内（UI）的信号。Maximum value 是 $C_{-1}$ 、 $C_{1}$ 为 0，$C_{0}$ 为 1 时的情形。上述策略应用规则如下：
@@ -303,7 +307,7 @@ de-emphasis 同样也适用于 Beacon 信号。链路处于 L2 状态的设备�
 
 提供两个唤醒机制主要是考虑关于功耗的需求。如果使用 Beacon，端点和 Root Complex 之间所有的 bridges 和 switch 都需要使用 $V_{aux}$，以便它们能检测和生成 Beacon。在有限电池电量的移动系统中，节省功率具有高优先级，此时 WAKE# 引脚是首选的，该方法能使用尽可能少的$V_{aux}$。引脚可以从端点直接连到 Root Complex，不需要其他器件使用 $V_{aux}$。
 
-### Properties of the Beacon Signal
+### 8.3.2 Properties of the Beacon Signal
 - 一种低频、直流平衡差分信号，由 $2ns$ 到 $16\mu s$ 之间的周期脉冲组成
 - 脉冲间最大时间不超过 $16\mu s$
 - 传输的 Beacon 信号必须满足表 13-3 中的电压规格
@@ -331,7 +335,7 @@ de-emphasis 同样也适用于 Beacon 信号。链路处于 L2 状态的设备�
 ![](./images/13-27.png)
 
 ## 9.4 Effects of Jitter
-抖动（timeing uncertainty）是当边沿在其理想时间之前或之后到达时发生的情况，其会降低信息完整性并使眼水平/垂直打开得更宽或更窄（与 normal 相比）。它由多种因素引起，如环境因素、传输过程中的数据模式，以及使信号电压电平超过/低于正常区域的噪声/信号衰减。在 Gen1 中可以认为这是简单的集总（lumped effect）效应，但在更高速率下，它将是一个更为复杂、严峻的问题，会分成几个部分去考虑。基于此，Gen3 定义了 5 种不同的抖动值，以下简单介绍了对几种抖动：
+抖动（timeing uncertainty）是当边沿在其理想时间之前或之后到达时发生的情况，其会降低信息完整性并使眼水平/垂直打开得更宽或更窄（与 normal 相比）。它由多种因素引起，如环境因素、传输过程中的数据模式，以及使信号电压电平超过/低于正常区域的噪声/信号衰减。在 Gen1 中可以认为这是简单的集总（lumped effect）效应，但在更高速率下，它将是一个更为复杂、严峻的问题，会分成几个部分去考虑。基于此，Gen3 定义了 5 种不同的抖动值，以下简单介绍了几种抖动：
 1. Un-correlated-jitter：与传输的数据模式无关
 2. Rj, Random jitter：无法预测源的随机抖动，一般假设符合高斯分布，通常由系统中的电噪声或热噪声引起。
 3. Dj, Deterministic jitter: 可预测并且受峰间（peak-to-peak）峰值限制，通常由 EMI、串扰（crosstalk）、电源噪声或接地问题引起。
@@ -353,7 +357,7 @@ de-emphasis 同样也适用于 Beacon 信号。链路处于 L2 状态的设备�
 
 # 11. Receiver Characteristics
 ## 11.1 Stressed-Eye Testing
-接收端应使用 stressed eye 技术，其中将具有特定问题的信号提供给输入引脚并监测 BER。由于使用方法不同，SPEC 将 Gen1/Gen2/Gen3 分开，然后给出第三部分，定义所有速率通用的参数。
+接收端应使用 stressed eye 技术，其中将具有特定问题的信号提供给输入引脚并监测 BER。由于使用方法不同，SPEC 将 Gen1/2/3 分开，然后给出第三部分，定义所有速率通用的参数。
 >  "Stressed eye"（受压眼图）是一种用于衡量和评估信号质量的术语。眼图是一种图形表示方式，用于显示数字信号中的时序和噪声信息。"Stressed eye"表示在特定条件下测试信号时，眼图的形状变得更加压缩或受到影响。
 > 在PCIe通信中，传输的数据以比特流的形式进行，而眼图显示了这个比特流中的每个比特位的时序信息。一个正常的眼图应该表现为开放的“眼”形，使接收端能够准确地识别每个比特的时间窗口。然而，在某些情况下，为了测试信号的容忍度和鲁棒性，测试者可能会故意引入一些干扰，导致眼图受到压缩，即“stressed”。
 > "Stressed eye"测试有助于评估PCIe设备在不理想条件下的性能，以确保它们能够在实际使用中可靠地进行通信。这种测试可以模拟信号在长距离传输、高速传输或其他恶劣环境下的表现，以提前发现潜在的通信问题。
@@ -408,6 +412,7 @@ SPEC 中进描述了 one-tap 过滤器，图 13-33 中显示了 two-tap 版本�
 ![](./images/table13-5-2.png)
 <center>Figure 13-34: 2.5 GT/s Reveiver Eye Diagram</center>
 ![](./images/13-34.png)
+
 # 12. Link Power Management States
 图 13-35 ~ 13-39 描述了链路处于各种电源管理状态时物理层的电气状态，并描述了一些电气特性，其中之一是 Rx/Tx termination，这有时作为有源逻辑实现。
 <center>Figure 13-35: L0 Full-On Link State</center>
